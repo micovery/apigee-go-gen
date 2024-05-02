@@ -24,5 +24,7 @@ LD_FLAGS="-X main.GitTag=${GIT_TAG} -X main.BuildTimestamp=${BUILD_TIMESTAMP} -X
 
 mkdir -p bin
 echo "Building tool ..."
+
+go env
 go build -buildvcs=true -ldflags "${LD_FLAGS}" -o bin/apigee-go-gen ./cmd/apigee-go-gen
 

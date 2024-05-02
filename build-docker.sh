@@ -67,18 +67,19 @@ echo "LATEST_TAG=${LATEST_TAG}"
 echo "BUILD_TAG=${BUILD_TAG}"
 echo "GIT_TAG=${GIT_TAG}"
 echo "GIT_COMMIT=${GIT_COMMIT}"
+GIT_REPO=micovery/apigee-go-gen
 
-docker build -t "${REGISTRY}/${GIT_REPO}:${BUILD_TAG}" \
-       -t "${REGISTRY}/${GIT_REPO}:${GIT_TAG}" \
-       -t "${REGISTRY}/${GIT_REPO}:${GIT_COMMIT}" \
+docker buildx create --use
+
+docker buildx build  \
+       --platform=linux/amd64,linux/arm64  \
+       --tag "${REGISTRY}/${GIT_REPO}:${GIT_TAG}" \
+       --tag "${REGISTRY}/${GIT_REPO}:${GIT_COMMIT}" \
+       --tag "${REGISTRY}/${GIT_REPO}:${BUILD_TAG}" \
        --build-arg "GIT_REPO=${GIT_REPO}" \
        --build-arg="GIT_TAG=${GIT_TAG}" \
        --build-arg="GIT_COMMIT=${GIT_COMMIT}" \
        --build-arg="BUILD_TIMESTAMP=${BUILD_TIMESTAMP}" \
+       --push \
        .
 
-if [ "${1}" == "push" ] ; then
-  docker push "${REGISTRY}/${GIT_REPO}:${BUILD_TAG}"
-  docker push "${REGISTRY}/${GIT_REPO}:${GIT_TAG}"
-  docker push "${REGISTRY}/${GIT_REPO}:${GIT_COMMIT}"
-fi

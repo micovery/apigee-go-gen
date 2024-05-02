@@ -14,18 +14,31 @@
 #  limitations under the License.
 #
 
-FROM golang:1.21 as builder
+FROM --platform=$BUILDPLATFORM golang:alpine as builder
+
+ARG BUILDPLATFORM
+ARG GOOS
+ARG GOARCH
 
 ARG GIT_REPO
 ARG GIT_TAG
 ARG GIT_COMMIT
 ARG BUILD_TIMESTAMP
 
+RUN apk update && apk add --no-cache git
+
 ADD ./ /src
 WORKDIR /src
-RUN ./build.sh
 
-FROM golang:1.21
+ENV GOOS=$TARGETOS
+ENV GOARCH=$TARGETARCH
+
+RUN ls -lah
+RUN sh build.sh
+RUN ls -lah /src/bin/
+
+FROM --platform=$TARGETPLATFORM alpine:3
+ARG PLATFORM
 
 COPY LICENSE /
 

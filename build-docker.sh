@@ -48,7 +48,6 @@ getLatestRelease() {
   echo "$(getReleasedTags | sortSemver | pickLatestRelease)"
 }
 
-
 REGISTRY="${REGISTRY:-ghcr.io}"
 GIT_REPO="${GIT_REPO:-apigee/apigee-go-gen}"
 BUILD_TIMESTAMP=$(date "+%s")
@@ -67,7 +66,6 @@ echo "LATEST_TAG=${LATEST_TAG}"
 echo "BUILD_TAG=${BUILD_TAG}"
 echo "GIT_TAG=${GIT_TAG}"
 echo "GIT_COMMIT=${GIT_COMMIT}"
-GIT_REPO=micovery/apigee-go-gen
 
 docker buildx create --use
 

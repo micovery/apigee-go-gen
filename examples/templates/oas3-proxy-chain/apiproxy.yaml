@@ -1,0 +1,92 @@
+#  Copyright 2024 Google LLC
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#       http:#www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+APIProxy:
+  .revision: 1
+  .name: {{ $.Values.name }}
+Policies:
+  - RaiseFault:
+      .continueOnError: false
+      .enabled: true
+      .name: RF-CatchAll
+      DisplayName: RF-CatchAll
+      FaultResponse:
+        Set:
+          Payload:
+            .contentType: application/json
+            -Data: |-
+              {
+                 "status": 404
+                 "error": "NotFound"
+                 "message": "resource not found"
+              }
+          StatusCode: 404
+          ReasonPhrase: Not found
+      IgnoreUnresolvedVariables: true
+  #{{- range $key, $spec := $.Values.specs }}
+  #{{- if contains "_string" $key  }}
+  #  {{- continue }}
+  #{{- end }}
+  #{{- $serviceName := $spec | dig "info" "x-serviceName" "" }}
+  #{{- $basePath := include "get_basepath" (index $spec.servers 0 "url") }}
+  - AssignMessage:
+      .continueOnError: false
+      .enabled: true
+      .name: AM-set-{{ $key }}
+      DisplayName: AM-set-{{ $key }}
+      AssignVariable:
+        Name: sub_path
+        Value: {{ print $basePath }}/{{ $serviceName }}
+      IgnoreUnresolvedVariables: true
+      AssignTo:
+        .createNew: false
+        .transport: http
+        .type: request
+  #{{- end }}
+ProxyEndpoints:
+  - ProxyEndpoint:
+      .name: default
+      PreFlow:
+        .name: PreFlow
+      Flows:
+      #{{- range $key, $spec := $.Values.specs }}
+        #{{- if contains "_string" $key }}
+          #  {{- continue }}
+        #{{- end }}
+        #{{- fmt_printf "Processing paths for %v\n" $key }}
+        - Flow:
+            .name: {{ $key }}
+            Condition: |+
+        #{{ range $path, $pathItem := $spec.paths }}
+              (proxy.pathsuffix MatchesPath "{{  regexReplaceAll "{[^}]*}" $path "*" }}") OR
+        #{{ end }}
+              true = false
+            Request:
+              - Step:
+                  Name: AM-set-{{ $key }}
+      #{{- end }}
+        - Flow:
+            .name: CatchAll
+            Request:
+              - Step:
+                  Name: RF-CatchAll
+      HTTPProxyConnection:
+        BasePath: {{ $.Values.base_path }}
+      RouteRule:
+        .name: default
+        TargetEndpoint: default
+TargetEndpoints:
+  - TargetEndpoint:
+      .name: default
+      LocalTargetConnection:
+        Path: /{sub_path}
